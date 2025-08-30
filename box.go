@@ -130,6 +130,7 @@ func New(options Options) (*Box, error) {
 	var needCacheFile bool
 	var needClashAPI bool
 	var needV2RayAPI bool
+	var needMetricAPI bool
 	if experimentalOptions.CacheFile != nil && experimentalOptions.CacheFile.Enabled || options.PlatformLogWriter != nil {
 		needCacheFile = true
 	}
@@ -138,6 +139,9 @@ func New(options Options) (*Box, error) {
 	}
 	if experimentalOptions.V2RayAPI != nil && experimentalOptions.V2RayAPI.Listen != "" {
 		needV2RayAPI = true
+	}
+	if experimentalOptions.MetricAPI.Enabled() {
+		needMetricAPI = true
 	}
 	platformInterface := service.FromContext[platform.Interface](ctx)
 	var defaultLogWriter io.Writer
@@ -363,6 +367,14 @@ func New(options Options) (*Box, error) {
 			internalServices = append(internalServices, v2rayServer)
 			service.MustRegister[adapter.V2RayServer](ctx, v2rayServer)
 		}
+	}
+	if needMetricAPI {
+		metricServer, err := experimental.NewMetricServer(logFactory.NewLogger("metric-api"), common.PtrValueOrDefault(experimentalOptions.MetricAPI))
+		if err != nil {
+			return nil, E.Cause(err, "create metric api server")
+		}
+		router.AppendTracker(metricServer)
+		internalServices = append(internalServices, metricServer)
 	}
 	if ntpOptions.Enabled {
 		ntpDialer, err := dialer.New(ctx, ntpOptions.DialerOptions, ntpOptions.ServerIsDomain())

@@ -36,7 +36,7 @@ type Router struct {
 	ruleSetMap        map[string]adapter.RuleSet
 	processSearcher   process.Searcher
 	pauseManager      pause.Manager
-	trackers          []adapter.ConnectionTracker
+	trackers          []adapter.PacketTracking
 	platformInterface platform.Interface
 	needWIFIState     bool
 	started           bool
@@ -203,7 +203,7 @@ func (r *Router) Rules() []adapter.Rule {
 	return r.rules
 }
 
-func (r *Router) AppendTracker(tracker adapter.ConnectionTracker) {
+func (r *Router) AppendTracker(tracker adapter.PacketTracking) {
 	r.trackers = append(r.trackers, tracker)
 }
 
