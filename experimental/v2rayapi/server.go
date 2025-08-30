@@ -77,6 +77,6 @@ func (s *Server) Close() error {
 	)
 }
 
-func (s *Server) StatsService() adapter.ConnectionTracker {
+func (s *Server) StatsService() adapter.PacketTracking {
 	return s.statsService
 }

@@ -4,14 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"net"
 	"time"
 
+	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/common/varbin"
 )
 
 type ClashServer interface {
 	LifecycleService
-	ConnectionTracker
+	PacketTracking
 	Mode() string
 	ModeList() []string
 	HistoryStorage() URLTestHistoryStorage
@@ -32,7 +34,7 @@ type URLTestHistoryStorage interface {
 
 type V2RayServer interface {
 	LifecycleService
-	StatsService() ConnectionTracker
+	StatsService() PacketTracking
 }
 
 type CacheFile interface {
@@ -122,3 +124,18 @@ func OutboundTag(detour Outbound) string {
 	}
 	return detour.Tag()
 }
+
+type MetricService interface {
+	LifecycleService
+	PacketTracking
+}
+
+type PacketTracking interface {
+	WithConnCounters(inbound, outbound, user string) ConnAdapter[net.Conn]
+	WithPacketConnCounters(inbound, outbound, user string) ConnAdapter[N.PacketConn]
+}
+
+// ConnAdapter
+// Transform a connection to another connection. The T should be either of
+// net.Conn or N.PacketConn.
+type ConnAdapter[T any] func(T) T

@@ -245,12 +245,26 @@ func (s *Server) TrafficManager() *trafficontrol.Manager {
 	return s.trafficManager
 }
 
-func (s *Server) RoutedConnection(ctx context.Context, conn net.Conn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) net.Conn {
-	return trafficontrol.NewTCPTracker(conn, s.trafficManager, metadata, s.outbound, matchedRule, matchOutbound)
+func (s *Server) WithConnCounters(inbound, outbound, user string) adapter.ConnAdapter[net.Conn] {
+	return func(conn net.Conn) net.Conn {
+		metadata := adapter.InboundContext{Inbound: inbound, User: user}
+		var matchOutbound adapter.Outbound
+		if outbound != "" {
+			matchOutbound, _ = s.outbound.Outbound(outbound)
+		}
+		return trafficontrol.NewTCPTracker(conn, s.trafficManager, metadata, s.outbound, nil, matchOutbound)
+	}
 }
 
-func (s *Server) RoutedPacketConnection(ctx context.Context, conn N.PacketConn, metadata adapter.InboundContext, matchedRule adapter.Rule, matchOutbound adapter.Outbound) N.PacketConn {
-	return trafficontrol.NewUDPTracker(conn, s.trafficManager, metadata, s.outbound, matchedRule, matchOutbound)
+func (s *Server) WithPacketConnCounters(inbound, outbound, user string) adapter.ConnAdapter[N.PacketConn] {
+	return func(conn N.PacketConn) N.PacketConn {
+		metadata := adapter.InboundContext{Inbound: inbound, User: user}
+		var matchOutbound adapter.Outbound
+		if outbound != "" {
+			matchOutbound, _ = s.outbound.Outbound(outbound)
+		}
+		return trafficontrol.NewUDPTracker(conn, s.trafficManager, metadata, s.outbound, nil, matchOutbound)
+	}
 }
 
 func authentication(serverSecret string) func(next http.Handler) http.Handler {
