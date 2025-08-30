@@ -11,6 +11,12 @@ import (
 )
 
 func (s *metricServer) registerMetrics() error {
+	// Create a simple test counter first
+	testCounter := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "sing_box_test_metric",
+		Help: "Test metric to verify registration works",
+	})
+
 	s.packetCountersInbound = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "inbound_packet_bytes",
 		Help: "Total bytes of inbound packets",
@@ -20,10 +26,28 @@ func (s *metricServer) registerMetrics() error {
 		Name: "outbound_packet_bytes",
 		Help: "Total bytes of outbound packets",
 	}, []string{"outbound", "user"})
+
 	var err error
-	err = prometheus.Register(s.packetCountersInbound)
-	err = prometheus.Register(s.packetCountersOutbound)
-	return err
+	err = s.registry.Register(testCounter)
+	if err != nil {
+		return err
+	}
+	testCounter.Add(42)
+
+	err = s.registry.Register(s.packetCountersInbound)
+	if err != nil {
+		return err
+	}
+	err = s.registry.Register(s.packetCountersOutbound)
+	if err != nil {
+		return err
+	}
+
+	// Initialize with zero values to make metrics visible
+	s.packetCountersInbound.WithLabelValues("test", "").Add(0)
+	s.packetCountersOutbound.WithLabelValues("test", "").Add(0)
+
+	return nil
 }
 
 func (s *metricServer) WithConnCounters(inbound, outbound, user string) adapter.ConnAdapter[net.Conn] {

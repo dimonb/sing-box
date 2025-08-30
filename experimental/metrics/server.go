@@ -28,6 +28,8 @@ type metricServer struct {
 	logger log.Logger
 	opts   option.MetricOptions
 
+	registry *prometheus.Registry
+
 	packetCountersInbound  *prometheus.CounterVec
 	packetCountersOutbound *prometheus.CounterVec
 }
@@ -41,11 +43,20 @@ func NewServer(logger log.Logger, opts option.MetricOptions) (adapter.MetricServ
 	if opts.Path == "" {
 		opts.Path = "/metrics"
 	}
-	r.Get(opts.Path, promhttp.Handler().ServeHTTP)
+
+	// Create a custom registry
+	registry := prometheus.NewRegistry()
+
+	// Add Go metrics to the registry
+	registry.MustRegister(prometheus.NewGoCollector())
+	registry.MustRegister(prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}))
+
+	r.Get(opts.Path, promhttp.HandlerFor(registry, promhttp.HandlerOpts{}).ServeHTTP)
 	server := &metricServer{
-		http:   _server,
-		logger: logger,
-		opts:   opts,
+		http:     _server,
+		logger:   logger,
+		opts:     opts,
+		registry: registry,
 	}
 	err := server.registerMetrics()
 	return server, err
